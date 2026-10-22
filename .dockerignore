@@ -1,0 +1,4 @@
+*
+!pyproject.toml
+!telegram_reader/
+!telegram_reader/*.py

@@ -1,0 +1,65 @@
+name: telegram-reader-mcp
+
+x-app: &app
+  image: ${READER_IMAGE:-telegram-reader-mcp:local}
+  init: true
+  user: "10001:10001"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=32m,mode=1777,noexec,nosuid,nodev"]
+  mem_limit: 768m
+  cpus: 1.0
+  pids_limit: 128
+  logging:
+    driver: json-file
+    options: {max-size: "5m", max-file: "2"}
+
+services:
+  reader:
+    <<: *app
+    command: [serve]
+    restart: unless-stopped
+    stop_grace_period: 20s
+    ports: ["127.0.0.1:18765:8000"]
+    volumes:
+      - ./config:/config:ro
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-m", "telegram_reader", "check"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 60s
+
+  setup:
+    <<: *app
+    profiles: [setup]
+    command: [init]
+    restart: "no"
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./config:/config
+      - ./data:/data
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    environment:
+      MCP_DOMAIN: ${MCP_DOMAIN:-}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    mem_limit: 128m
+    cpus: 0.25
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+
+volumes:
+  caddy-data: {}
+  caddy-config: {}

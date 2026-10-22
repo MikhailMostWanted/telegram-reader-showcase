@@ -1,0 +1,12 @@
+{$MCP_DOMAIN} {
+    request_body {
+        max_size 1MB
+    }
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        Cache-Control no-store
+    }
+    reverse_proxy reader:8000
+    # Do not add access logs: OAuth callback URLs contain sensitive parameters.
+}
